@@ -3,4 +3,6 @@ pyvenv.cfg
 ./venv
 lib/
 bin/
-./__pycache__/
+__pycache__/
+include/
+*.db
