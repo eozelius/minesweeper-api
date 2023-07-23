@@ -1,0 +1,6 @@
+.DS_Store
+pyvenv.cfg
+./venv
+lib/
+bin/
+./__pycache__/
