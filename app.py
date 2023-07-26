@@ -1,6 +1,6 @@
-import json
 import os
 import sys
+import traceback
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -16,8 +16,15 @@ db = SQLAlchemy()
 db.init_app(app)
 
 # CORS
-cors = CORS(app, resources={r"/high-scores": {"origins": "https://minesweeper.ethanoz.com"}})
-cors = CORS(app, resources={r"/save-high-score": {"origins": "https://minesweeper.ethanoz.com"}})
+cors = CORS(
+  app,
+  resources={r"/high-scores": {
+    "origins": [
+      "https://minesweeper.ethanoz.com",
+      'http://localhost:8080'
+    ]
+  }}
+)
 
 # Models
 class HighScore(db.Model):
@@ -49,22 +56,41 @@ def get_high_scores():
   return jsonify([ hs.serialize for hs in high_scores ])
 
 # Save a High Score
-@app.post('/save-high-score')
+@app.post('/high-scores')
 def save_high_score():
   try:
-    # name = request.json['name']
-    # time = request.json['time']
-    # score = request.json['score']
-    # new_high_score = HighScore(name, score, time)
-    # high_scores.append(new_high_score)
+    high_score_request_data: dict = request.get_json(silent=True)
+
+    # basic error checking request
+    if None in [
+      high_score_request_data.get('initials'),
+      high_score_request_data.get('time'),
+    ]:
+      app.logger.error('invalid request, missing arguments')
+      return jsonify({
+        'code': 400,
+        'message': 'invalid request, missing required args: "initials", "time" and/or "score"'
+      })
+
+    new_high_score = HighScore(
+      initials=high_score_request_data.get('initials'),
+      time=high_score_request_data.get('time'),
+      score=high_score_request_data.get('score')
+    )
+
+    db.session.add(new_high_score)
+    db.session.commit()
 
     return jsonify({
       'code': 200,
-      'message': 'success'
+      'message': 'success',
+      'high_score': new_high_score.serialize
     })
   except:
+    db.session.rollback()
     error = sys.exc_info()[0]
     app.logger.error('error => %s', error)
+    traceback.print_exc()
     return jsonify({
       'code': 400,
       'message': 'Error, unable to process request'
