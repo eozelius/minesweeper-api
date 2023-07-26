@@ -6,3 +6,4 @@ bin/
 __pycache__/
 include/
 *.db
+database.py
